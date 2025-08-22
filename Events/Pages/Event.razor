@@ -1,0 +1,58 @@
+﻿@page "/events"
+@inject EventServiceBlazor EventService
+
+<h3 class="text-center">Upcoming Events</h3>
+
+@if (events == null)
+{
+    <p><em>Loading events...</em></p>
+}
+else if (!events.Any())
+{
+    <p>No events found.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var ev in events)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm p-3">
+                    <div class="card-body">
+                        <h5 class="card-title">@ev.Title</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">@ev.Date.ToShortDateString() - @ev.Location</h6>
+                        <p class="card-text">@ev.Description</p>
+                        <small>Organized by: @ev.OrganizerName</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<EventDto> events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            events = await EventService.GetAllEvents();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading events: " + ex.Message);
+        }
+    }
+
+    public class EventDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public DateTime Date { get; set; }
+        public string Location { get; set; }
+        public string OrganizerName { get; set; }
+        public Guid? OrganizerId { get; set; }
+    }
+}

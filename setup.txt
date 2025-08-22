@@ -1,0 +1,28 @@
+?? How to Run the Project
+
+Prerequisites
+
+-> .NET 8 SDK installed
+-> SQL Server (or use SQLite if configured in appsettings.json)
+-> Visual Studio 2022 / Rider / VS Code
+
+Steps
+-> Clone the repository 
+	git clone https://github.com/your-username/event-management-platform.git
+	cd event-management-platform
+-> Apply database migrations
+	cd DataAccess
+	dotnet ef database update
+-> Run the WebAPI
+	cd ../WebAPI
+	dotnet run
+The API will start (default: https://localhost:5001 or http://localhost:5000).
+Swagger will be available at /swagger/index.html.
+-> Run the Blazor WebAssembly Client
+	cd ../BlazorClient
+	dotnet run
+Open browser at https://localhost:7000 (or configured port).
+
+API: https://localhost:7093/swagger
+UI Blazor: https://localhost:7078/
+

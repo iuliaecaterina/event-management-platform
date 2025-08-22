@@ -1,0 +1,174 @@
+﻿@page "/manage-events"
+@inject HttpClient Http
+
+<PageTitle>Manage Events</PageTitle>
+
+<h1>Manage Events</h1>
+
+@if (events == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning">
+            @errorMessage
+        </div>
+    }
+
+    <EditForm Model="newEvent" OnValidSubmit="AddEvent">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <input class="form-control" placeholder="Organizer ID (Guid)" @bind="organizerId" required />
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <input class="form-control" placeholder="Title" @bind="newEvent.Title" required />
+            </div>
+            <div class="col">
+                <input class="form-control" placeholder="Organizer Name" @bind="newEvent.OrganizerName" required />
+            </div>
+        </div>
+        <div class="mb-3">
+            <textarea class="form-control" placeholder="Description" @bind="newEvent.Description" required></textarea>
+        </div>
+        <div class="row mb-3">
+            <div class="col">
+                <input class="form-control" type="datetime-local" @bind="newEvent.Date" required />
+            </div>
+            <div class="col">
+                <input class="form-control" placeholder="Location" @bind="newEvent.Location" required />
+            </div>
+        </div>
+        <button class="btn btn-success" type="submit">Add</button>
+    </EditForm>
+
+    <hr />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Date</th>
+                <th>Location</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ev in events)
+            {
+                <tr>
+                    <td><input class="form-control" @bind="ev.Title" /></td>
+                    <td><input class="form-control" type="datetime-local" @bind="ev.Date" /></td>
+                    <td><input class="form-control" @bind="ev.Location" /></td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="() => UpdateEvent(ev)">Update</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteEvent(ev.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<EventDto>? events;
+    private EventDto newEvent = new();
+    private string organizerId = "";
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        events = await Http.GetFromJsonAsync<List<EventDto>>("https://localhost:7093/api/Event");
+    }
+
+    private async Task AddEvent()
+    {
+        if (!Guid.TryParse(organizerId, out var parsedOrganizerId))
+        {
+            errorMessage = "Trebuie să introduci un ID valid al organizatorului pentru a adauga un eveniment.";
+            return;
+        }
+
+        errorMessage = null;
+
+        newEvent.Id = Guid.NewGuid();
+        newEvent.OrganizerId = parsedOrganizerId;
+
+        var response = await Http.PostAsJsonAsync($"https://localhost:7093/api/Event?userId={organizerId}", newEvent);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadEvents();
+            newEvent = new(); // reseteaza formularul
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            errorMessage = $"Adaugarea a eșuat: {error}";
+        }
+    }
+
+    private async Task UpdateEvent(EventDto ev)
+    {
+        if (!Guid.TryParse(organizerId, out _))
+        {
+            errorMessage = "Trebuie sa introduci ID-ul organizatorului pentru a putea edita un eveniment.";
+            return;
+        }
+
+        errorMessage = null;
+
+        var response = await Http.PutAsJsonAsync($"https://localhost:7093/api/Event/{ev.Id}?userId={organizerId}", ev);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            errorMessage = $"Actualizarea a esuat: {error}";
+        }
+    }
+
+    private async Task DeleteEvent(Guid id)
+    {
+        if (!Guid.TryParse(organizerId, out _))
+        {
+            errorMessage = "Trebuie sa introduci ID-ul organizatorului pentru a putea sterge un eveniment.";
+            return;
+        }
+
+        errorMessage = null;
+
+        var response = await Http.DeleteAsync($"https://localhost:7093/api/Event/{id}?userId={organizerId}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            events = events.Where(e => e.Id != id).ToList();
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            errorMessage = $"Stergerea a eșuat: {error}";
+        }
+    }
+
+    public class EventDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public DateTime Date { get; set; }
+        public string Location { get; set; }
+        public string OrganizerName { get; set; }
+        public Guid? OrganizerId { get; set; }
+    }
+}
